@@ -1,0 +1,227 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local gui = Instance.new("ScreenGui")
+gui.IgnoreGuiInset = true
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+local bg = Instance.new("Frame")
+bg.Size = UDim2.fromScale(1,1)
+bg.BorderSizePixel = 0
+bg.Parent = gui
+
+local gradient = Instance.new("UIGradient")
+gradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255,0,170)),
+	ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0,170,255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(128,0,255))
+}
+gradient.Parent = bg
+
+for i = 1,40 do
+	local dot = Instance.new("Frame")
+	dot.Size = UDim2.new(0,math.random(2,6),0,math.random(2,6))
+	dot.Position = UDim2.new(math.random(),0,math.random(),0)
+	dot.BackgroundColor3 = Color3.new(1,1,1)
+	dot.BackgroundTransparency = 0.7
+	dot.BorderSizePixel = 0
+	dot.Parent = bg
+
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(1,0)
+	corner.Parent = dot
+
+	task.spawn(function()
+		while dot.Parent do
+			local newPos = UDim2.new(math.random(),0,-0.1,0)
+
+			TweenService:Create(
+				dot,
+				TweenInfo.new(math.random(8,15)),
+				{Position = newPos}
+			):Play()
+
+			task.wait(math.random(8,15))
+
+			dot.Position = UDim2.new(math.random(),0,1.1,0)
+		end
+	end)
+end
+
+local glow = Instance.new("ImageLabel")
+glow.Size = UDim2.fromOffset(220,220)
+glow.Position = UDim2.new(.5,-110,.18,-110)
+glow.BackgroundTransparency = 1
+glow.Image = "rbxassetid://5028857084"
+glow.ImageTransparency = .25
+glow.Parent = bg
+
+-- Logo
+local logo = Instance.new("ImageLabel")
+logo.Size = UDim2.fromOffset(120,120)
+logo.Position = UDim2.new(.5,-60,.18,-60)
+logo.BackgroundTransparency = 1
+logo.Image = "rbxassetid://135461405245048"
+logo.Parent = bg
+
+local logoGradient = Instance.new("UIGradient")
+logoGradient.Color = ColorSequence.new({
+	ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255,0,0)),
+	ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255,127,0)),
+	ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255,255,0)),
+	ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0,255,0)),
+	ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0,255,255)),
+	ColorSequenceKeypoint.new(0.83, Color3.fromRGB(0,0,255)),
+	ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255,0,255))
+})
+logoGradient.Parent = logo
+
+task.spawn(function()
+	while logo.Parent do
+		logo.Rotation += 1.5
+		task.wait(0.01)
+	end
+end)
+
+task.spawn(function()
+	while logo.Parent do
+		logoGradient.Rotation += 2
+		task.wait(0.02)
+	end
+end)
+
+task.spawn(function()
+	local t = 0
+	while logo.Parent do
+		t += 0.05
+
+		local size = 120 + math.sin(t) * 12
+
+		logo.Size = UDim2.fromOffset(size, size)
+		logo.Position = UDim2.new(
+			0.5,
+			-size/2,
+			0.18,
+			-size/2
+		)
+
+		task.wait()
+	end
+end)
+
+TweenService:Create(
+	glow,
+	TweenInfo.new(
+		10,
+		Enum.EasingStyle.Linear,
+		Enum.EasingDirection.InOut,
+		-1
+	),
+	{Rotation = -360}
+):Play()
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,60)
+title.Position = UDim2.new(0,0,.37,0)
+title.BackgroundTransparency = 1
+title.Text = "鹿脚本"
+title.Font = Enum.Font.GothamBlack
+title.TextScaled = true
+title.TextColor3 = Color3.new(1,1,1)
+title.Parent = bg
+
+local percent = Instance.new("TextLabel")
+percent.Size = UDim2.new(0,150,0,40)
+percent.Position = UDim2.new(.5,-75,.56,-20)
+percent.BackgroundTransparency = 1
+percent.TextColor3 = Color3.new(1,1,1)
+percent.Font = Enum.Font.GothamBold
+percent.TextScaled = true
+percent.Text = "0%"
+percent.Parent = bg
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(0,400,0,30)
+status.Position = UDim2.new(.5,-200,.62,0)
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.new(1,1,1)
+status.Font = Enum.Font.Gotham
+status.TextScaled = true
+status.Text = "Loading."
+status.Parent = bg
+
+local barBack = Instance.new("Frame")
+barBack.Size = UDim2.new(0,500,0,18)
+barBack.Position = UDim2.new(.5,-250,.7,0)
+barBack.BackgroundTransparency = .7
+barBack.BackgroundColor3 = Color3.new(1,1,1)
+barBack.BorderSizePixel = 0
+barBack.Parent = bg
+
+Instance.new("UICorner",barBack).CornerRadius = UDim.new(1,0)
+
+local bar = Instance.new("Frame")
+bar.Size = UDim2.new(0,0,1,0)
+bar.BorderSizePixel = 0
+bar.Parent = barBack
+
+Instance.new("UICorner",bar).CornerRadius = UDim.new(1,0)
+
+local barGradient = Instance.new("UIGradient")
+barGradient.Color = ColorSequence.new{
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(0,255,255)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(255,255,255))
+}
+barGradient.Parent = bar
+
+task.spawn(function()
+	while gui.Parent do
+		gradient.Rotation += 0.5
+		task.wait(0.02)
+	end
+end)
+
+local messages = {
+	"加.",
+	"加载",
+	"加载中.",
+	"加载中……",
+	"欢迎使用鹿脚本.",
+	"请等待"
+}
+
+for i = 0,100 do
+	bar.Size = UDim2.new(i/100,0,1,0)
+	percent.Text = i.."%"
+
+	if i == 15 then status.Text = messages[2] end
+	if i == 35 then status.Text = messages[3] end
+	if i == 55 then status.Text = messages[4] end
+	if i == 75 then status.Text = messages[5] end
+	if i == 90 then status.Text = messages[6] end
+
+	task.wait(0.04)
+end
+
+status.Text = "作者鹿言"
+
+task.wait(1)
+
+for i = 0,1,0.03 do
+	bg.BackgroundTransparency = i
+	title.TextTransparency = i
+	status.TextTransparency = i
+	percent.TextTransparency = i
+	bar.BackgroundTransparency = i
+	barBack.BackgroundTransparency = 0.7 + i * 0.3
+	logo.ImageTransparency = i
+	glow.ImageTransparency = i
+	task.wait(0.03)
+end
+
+gui:Destroy()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/lolssqa/rspy-but-back/refs/heads/main/%E9%B9%BF%E8%A8%80%E9%A3%9E%E4%B8%8D%E8%B5%B7%E6%9D%A5%E8%84%9A%E6%9C%ACv3.(1)"))()
