@@ -1,0 +1,240 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+local localPlr = Players.LocalPlayer
+local PlayerGui = localPlr:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PartScaleEditor"
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+--圆形悬浮开关
+local circleToggle = Instance.new("TextButton")
+circleToggle.Size = UDim2.new(0,42,0,42)
+circleToggle.Position = UDim2.new(0.87,0,0.08,0)
+circleToggle.BackgroundColor3 = Color3.fromRGB(28,32,48)
+circleToggle.Text = "🤓"
+circleToggle.Font = Enum.Font.GothamBold
+circleToggle.TextSize =20
+circleToggle.TextColor3 = Color3.new(1,1,1)
+circleToggle.ZIndex = 100
+circleToggle.Parent = screenGui
+local cirCorner = Instance.new("UICorner")
+cirCorner.CornerRadius = UDim.new(0.5,0)
+cirCorner.Parent = circleToggle
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 440, 0, 440)
+mainFrame.Position = UDim2.new(0.02,0,0.10,0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12,14,22)
+mainFrame.BorderSizePixel = 0
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.Visible = true
+mainFrame.Parent = screenGui
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0,12)
+mainCorner.Parent = mainFrame
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1,0,0,36)
+titleText.BackgroundTransparency = 1
+titleText.Text = "R15分部位缩放鹿言制作"
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize =16
+titleText.TextColor3 = Color3.new(1,1,1)
+titleText.Parent = mainFrame
+
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1,-12,1,-42)
+scrollFrame.Position = UDim2.new(0,6,0,36)
+scrollFrame.BackgroundTransparency =1
+scrollFrame.CanvasSize = UDim2.new(0,0,0,680)
+scrollFrame.ScrollBarThickness =6
+scrollFrame.Parent = mainFrame
+local uiList = Instance.new("UIListLayout")
+uiList.Padding = UDim.new(0,10)
+uiList.Parent = scrollFrame
+
+local scaleData = {
+    Head = 1,
+    LeftArm =1,
+    RightArm =1,
+    LeftLeg =1,
+    RightLeg =1,
+    Torso =1
+}
+local originPartSize = {}
+
+local guiVisible = true
+circleToggle.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    mainFrame.Visible = guiVisible
+end)
+
+--拖拽逻辑
+local dragging = false
+local dragStartPos
+local frameStartPos
+
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStartPos = input.Position
+        frameStartPos = mainFrame.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartPos
+        mainFrame.Position = UDim2.new(
+            frameStartPos.X.Scale,
+            frameStartPos.X.Offset + delta.X,
+            frameStartPos.Y.Scale,
+            frameStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+UserInputService.InputEnded:Connect(function()
+    dragging = false
+end)
+
+local function cacheOrigin(char)
+    table.clear(originPartSize)
+    local r15Map = {
+        Head = char:FindFirstChild("Head"),
+        Torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso"),
+        LeftArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("LeftArm"),
+        RightArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("RightArm"),
+        LeftLeg = char:FindFirstChild("LeftUpperLeg") or char:FindFirstChild("LeftLeg"),
+        RightLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("RightLeg")
+    }
+    for key,part in pairs(r15Map) do
+        if part and part:IsA("BasePart") then
+            originPartSize[key] = part.Size
+        end
+    end
+end
+
+local function refreshPartScale()
+    local char = localPlr.Character
+    if not char then return end
+    if next(originPartSize) == nil then cacheOrigin(char) end
+
+    local r15Map = {
+        Head = char:FindFirstChild("Head"),
+        Torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso"),
+        LeftArm = char:FindFirstChild("LeftUpperArm") or char:FindFirstChild("LeftArm"),
+        RightArm = char:FindFirstChild("RightUpperArm") or char:FindFirstChild("RightArm"),
+        LeftLeg = char:FindFirstChild("LeftUpperLeg") or char:FindFirstChild("LeftLeg"),
+        RightLeg = char:FindFirstChild("RightUpperLeg") or char:FindFirstChild("RightLeg")
+    }
+    for key,part in pairs(r15Map) do
+        if part and originPartSize[key] then
+            part.Size = originPartSize[key] * scaleData[key]
+        end
+    end
+end
+
+local function makeSlider(labelName,dataKey,min,max,default)
+    local cont = Instance.new("Frame")
+    cont.Size = UDim2.new(1,-10,0,44)
+    cont.BackgroundTransparency =1
+    cont.Parent = scrollFrame
+
+    local lab = Instance.new("TextLabel")
+    lab.Size = UDim2.new(1,0,0,17)
+    lab.Text = labelName.." ["..string.format("%.2f",default).."]"
+    lab.Font = Enum.Font.Gotham
+    lab.TextSize =11
+    lab.TextXAlignment = Enum.TextXAlignment.Left
+    lab.BackgroundTransparency =1
+    lab.TextColor3 = Color3.new(1,1,1)
+    lab.Parent = cont
+
+    local barBg = Instance.new("Frame")
+    barBg.Size = UDim2.new(1,0,0,12)
+    barBg.Position = UDim2.new(0,0,0,22)
+    barBg.BackgroundColor3 = Color3.fromRGB(40,44,60)
+    barBg.Parent = cont
+    local c1 = Instance.new("UICorner")
+    c1.CornerRadius = UDim.new(0,6)
+    c1.Parent = barBg
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default-min)/(max-min),0,1,0)
+    fill.BackgroundColor3 = Color3.fromRGB(70,160,255)
+    fill.Parent = barBg
+    local c2 = Instance.new("UICorner")
+    c2.CornerRadius = UDim.new(0,6)
+    c2.Parent = fill
+
+    local val = default
+    local down = false
+
+    local function update(xpos)
+        local f = math.clamp(xpos / barBg.AbsoluteSize.X,0,1)
+        val = min + f*(max-min)
+        fill.Size = UDim2.new(f,0,1,0)
+        lab.Text = labelName.." ["..string.format("%.2f",val).."]"
+        scaleData[dataKey] = val
+        refreshPartScale()
+    end
+
+    barBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            down = true
+            update(input.Position.X - barBg.AbsolutePosition.X)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if down and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input.Position.X - barBg.AbsolutePosition.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            down = false
+        end
+    end)
+end
+
+local function makeResetBtn()
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1,-10,0,32)
+    btn.BackgroundColor3 = Color3.fromRGB(36,40,55)
+    btn.Text = "全部重置为1.0"
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize =12
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.AutoLocalize = false
+    btn.Parent = scrollFrame
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0,8)
+    cc.Parent = btn
+    btn.MouseButton1Click:Connect(function()
+        scaleData.Head =1
+        scaleData.LeftArm =1
+        scaleData.RightArm =1
+        scaleData.LeftLeg =1
+        scaleData.RightLeg =1
+        scaleData.Torso =1
+        refreshPartScale()
+    end)
+end
+
+makeSlider("头部","Head",0.3,2.5,1)
+makeSlider("左胳膊","LeftArm",0.3,2.5,1)
+makeSlider("右胳膊","RightArm",0.3,2.5,1)
+makeSlider("左腿","LeftLeg",0.3,2.5,1)
+makeSlider("右腿","RightLeg",0.3,2.5,1)
+makeSlider("躯干身体","Torso",0.3,2.5,1)
+makeResetBtn()
+
+localPlr.CharacterAdded:Connect(function(char)
+    task.wait(0.25)
+    cacheOrigin(char)
+    refreshPartScale()
+end)
