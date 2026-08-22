@@ -1,0 +1,346 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+
+local localPlr = Players.LocalPlayer
+local PlayerGui = localPlr:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ScaleEditor"
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+local blur = Instance.new("BlurEffect")
+blur.Size = 0
+blur.Parent = game.Lighting
+
+local snowContainer = Instance.new("Frame")
+snowContainer.Size = UDim2.new(1, 0, 1, 0)
+snowContainer.BackgroundTransparency = 1
+snowContainer.ZIndex = -1
+snowContainer.Visible = false
+snowContainer.Parent = screenGui
+
+local snowParticles = {}
+local sliderFills = {}
+
+local function spawnSnowflake()
+    local snow = Instance.new("TextLabel")
+    snow.Size = UDim2.new(0, math.random(2, 6), 0, math.random(2, 6))
+    snow.BackgroundTransparency = 1
+    snow.Text = "•"
+    snow.TextColor3 = Color3.new(1, 1, 1)
+    snow.TextSize = math.random(8, 14)
+    snow.Position = UDim2.new(math.random(), 0, -0.06, 0)
+    snow.ZIndex = -1
+    snow.Parent = snowContainer
+    table.insert(snowParticles, {
+        inst = snow,
+        speedY = math.random(40, 90),
+        speedX = math.random(-18, 18)
+    })
+end
+
+--悬浮圆形开关
+local circleToggle = Instance.new("TextButton")
+circleToggle.Size = UDim2.new(0, 42, 0, 42)
+circleToggle.Position = UDim2.new(0.87, 0, 0.16, 0)
+circleToggle.BackgroundColor3 = Color3.fromRGB(28, 32, 48)
+circleToggle.Text = "😎"
+circleToggle.Font = Enum.Font.GothamBold
+circleToggle.TextSize = 20
+circleToggle.TextColor3 = Color3.new(1, 1, 1)
+circleToggle.ZIndex = 100
+circleToggle.Parent = screenGui
+local cirCorner = Instance.new("UICorner")
+cirCorner.CornerRadius = UDim.new(0.5, 0)
+cirCorner.Parent = circleToggle
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 420, 0, 360)
+mainFrame.Position = UDim2.new(0.02, 0, 0.10, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(12, 14, 22)
+mainFrame.BorderSizePixel = 0
+mainFrame.BackgroundTransparency = 0.1
+mainFrame.Visible = true
+mainFrame.Parent = screenGui
+local mainCorner = Instance.new("UICorner")
+mainCorner.CornerRadius = UDim.new(0, 12)
+mainCorner.Parent = mainFrame
+
+local uiShadow = Instance.new("ImageLabel")
+uiShadow.Size = UDim2.new(1, 24, 1, 24)
+uiShadow.Position = UDim2.new(0, -12, 0, -12)
+uiShadow.BackgroundTransparency = 1
+uiShadow.Image = "rbxassetid://5554239508"
+uiShadow.ImageColor3 = Color3.new(0, 0, 0)
+uiShadow.ImageTransparency = 0.65
+uiShadow.ScaleType = Enum.ScaleType.Slice
+uiShadow.SliceCenter = Rect.new(24, 24, 256 - 24, 256 - 24)
+uiShadow.ZIndex = mainFrame.ZIndex - 1
+uiShadow.Parent = mainFrame
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.new(1, 0, 0, 36)
+titleText.BackgroundTransparency = 1
+titleText.Text = "巨人/缩小缩放/鹿言制作"
+titleText.Font = Enum.Font.GothamBold
+titleText.TextSize = 16
+titleText.TextColor3 = Color3.new(1, 1, 1)
+titleText.Parent = mainFrame
+
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(1, -12, 1, -42)
+scrollFrame.Position = UDim2.new(0, 6, 0, 36)
+scrollFrame.BackgroundTransparency = 1
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 420)
+scrollFrame.ScrollBarThickness = 6
+scrollFrame.Parent = mainFrame
+local uiList = Instance.new("UIListLayout")
+uiList.Padding = UDim.new(0, 12)
+uiList.Parent = scrollFrame
+
+local giantScale = 1
+local originPart = {}
+local guiVisible = true
+
+circleToggle.MouseButton1Click:Connect(function()
+    guiVisible = not guiVisible
+    mainFrame.Visible = guiVisible
+    snowContainer.Visible = guiVisible
+    if guiVisible then
+        TweenService:Create(blur, TweenInfo.new(0.35), { Size = 12 }):Play()
+    else
+        TweenService:Create(blur, TweenInfo.new(0.35), { Size = 0 }):Play()
+    end
+end)
+
+--窗口拖拽
+local dragging = false
+local dragStartPos
+local frameStartPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStartPos = input.Position
+        frameStartPos = mainFrame.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStartPos
+        mainFrame.Position = UDim2.new(
+            frameStartPos.X.Scale,
+            frameStartPos.X.Offset + delta.X,
+            frameStartPos.Y.Scale,
+            frameStartPos.Y.Offset + delta.Y
+        )
+    end
+end)
+UserInputService.InputEnded:Connect(function() dragging = false end)
+
+local function cacheParts(char)
+    table.clear(originPart)
+    for _,v in ipairs(char:GetChildren()) do
+        if v:IsA("BasePart") then
+            originPart[v] = v.Size
+        end
+    end
+end
+
+local function applyScale(scaleNum)
+    local char = localPlr.Character
+    if not char then return end
+    if next(originPart) == nil then cacheParts(char) end
+    for part,oriSize in pairs(originPart) do
+        if part:IsDescendantOf(char) and part:IsA("BasePart") then
+            part.Size = oriSize * scaleNum
+        end
+    end
+end
+
+local function makeGiantSlider()
+    local cont = Instance.new("Frame")
+    cont.Size = UDim2.new(1,-10,0,44)
+    cont.BackgroundTransparency =1
+    cont.Parent = scrollFrame
+
+    local lab = Instance.new("TextLabel")
+    lab.Size = UDim2.new(1,0,0,17)
+    lab.Text = "巨人倍率 [1.0]"
+    lab.Font = Enum.Font.Gotham
+    lab.TextSize =11
+    lab.TextXAlignment = Enum.TextXAlignment.Left
+    lab.BackgroundTransparency =1
+    lab.TextColor3 = Color3.new(1,1,1)
+    lab.Parent = cont
+
+    local barBg = Instance.new("Frame")
+    barBg.Size = UDim2.new(1,0,0,12)
+    barBg.Position = UDim2.new(0,0,0,22)
+    barBg.BackgroundColor3 = Color3.fromRGB(40,44,60)
+    barBg.Parent = cont
+    local c1 = Instance.new("UICorner")
+    c1.CornerRadius = UDim.new(0,6)
+    c1.Parent = barBg
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(0,0,1,0)
+    fill.Parent = barBg
+    local c2 = Instance.new("UICorner")
+    c2.CornerRadius = UDim.new(0,6)
+    c2.Parent = fill
+    table.insert(sliderFills, fill)
+
+    local val = 1
+    local down = false
+    local minV,maxV = 1,6
+
+    local function update(xpos)
+        local f = math.clamp(xpos/barBg.AbsoluteSize.X,0,1)
+        val = minV + f*(maxV-minV)
+        fill.Size = UDim2.new(f,0,1,0)
+        lab.Text = "巨人倍率 ["..string.format("%.2f",val).."]"
+        giantScale = val
+        applyScale(val)
+    end
+
+    barBg.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            down=true
+            update(i.Position.X-barBg.AbsolutePosition.X)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if down and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            update(i.Position.X-barBg.AbsolutePosition.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function() down=false end)
+end
+
+local function makeMiniSlider()
+    local cont = Instance.new("Frame")
+    cont.Size = UDim2.new(1,-10,0,44)
+    cont.BackgroundTransparency =1
+    cont.Parent = scrollFrame
+
+    local lab = Instance.new("TextLabel")
+    lab.Size = UDim2.new(1,0,0,17)
+    lab.Text = "缩小倍率 [1.0]"
+    lab.Font = Enum.Font.Gotham
+    lab.TextSize =11
+    lab.TextXAlignment = Enum.TextXAlignment.Left
+    lab.BackgroundTransparency =1
+    lab.TextColor3 = Color3.new(1,1,1)
+    lab.Parent = cont
+
+    local barBg = Instance.new("Frame")
+    barBg.Size = UDim2.new(1,0,0,12)
+    barBg.Position = UDim2.new(0,0,0,22)
+    barBg.BackgroundColor3 = Color3.fromRGB(40,44,60)
+    barBg.Parent = cont
+    local c1 = Instance.new("UICorner")
+    c1.CornerRadius = UDim.new(0,6)
+    c1.Parent = barBg
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(1,0,1,0)
+    fill.Parent = barBg
+    local c2 = Instance.new("UICorner")
+    c2.CornerRadius = UDim.new(0,6)
+    c2.Parent = fill
+    table.insert(sliderFills, fill)
+
+    local val = 1
+    local down = false
+    local minV,maxV = 0.2,1
+
+    local function update(xpos)
+        local f = math.clamp(xpos/barBg.AbsoluteSize.X,0,1)
+        val = maxV - f*(maxV-minV)
+        fill.Size = UDim2.new(1-f,0,1,0)
+        lab.Text = "缩小倍率 ["..string.format("%.2f",val).."]"
+        giantScale = val
+        applyScale(val)
+    end
+
+    barBg.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            down=true
+            update(i.Position.X-barBg.AbsolutePosition.X)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if down and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            update(i.Position.X-barBg.AbsolutePosition.X)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function() down=false end)
+end
+
+local function resetBtn()
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1,-10,0,32)
+    btn.BackgroundColor3 = Color3.fromRGB(36,40,55)
+    btn.Text = "恢复正常大小"
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize =12
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.AutoLocalize = false
+    btn.Parent = scrollFrame
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0,8)
+    cc.Parent = btn
+    btn.MouseButton1Click:Connect(function()
+        giantScale = 1
+        applyScale(1)
+    end)
+end
+
+makeGiantSlider()
+makeMiniSlider()
+resetBtn()
+
+localPlr.CharacterAdded:Connect(function(char)
+    task.wait(0.35)
+    table.clear(originPart)
+    cacheParts(char)
+    giantScale = 1
+    applyScale(1)
+end)
+
+TweenService:Create(mainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quad), {
+    Position = UDim2.new(0.02, 0, 0.18, 0)
+}):Play()
+TweenService:Create(blur, TweenInfo.new(0.4), { Size = 12 }):Play()
+
+local hue = 0
+RunService.RenderStepped:Connect(function(dt)
+    hue = (hue + dt * 0.35) % 1
+    local rainbowCol = Color3.fromHSV(hue, 0.85, 1)
+
+    for i, fill in ipairs(sliderFills) do
+        local offset = (i - 1) * 0.15
+        fill.BackgroundColor3 = Color3.fromHSV((hue + offset) % 1, 0.85, 1)
+    end
+
+    titleText.TextColor3 = rainbowCol
+    circleToggle.BackgroundColor3 = rainbowCol
+
+    if guiVisible and math.random() < 0.07 then
+        spawnSnowflake()
+    end
+
+    for i = #snowParticles, 1, -1 do
+        local obj = snowParticles[i]
+        local inst = obj.inst
+        inst.Position += UDim2.new(0, obj.speedX * dt, 0, obj.speedY * dt)
+        if inst.Position.Y.Scale > 1.05 then
+            inst:Destroy()
+            table.remove(snowParticles, i)
+        end
+    end
+end)
